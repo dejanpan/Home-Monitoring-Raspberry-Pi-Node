@@ -4,4 +4,5 @@
 
 pkill mjpg_streamer
 
-sudo nohup ./mjpg-streamer/mjpg_streamer -i "./mjpg-streamer/input_uvc.so -y -r $1 -f $3 -q 75" -o "./mjpg-streamer/output_http.so -n -p $2" &
+#sudo nohup mjpg_streamer -i "input_raspicam.so -rot 180 -y -r $1 -f $3 -q 75" -o "output_http.so -n -p $2" &
+mjpg_streamer -i "input_raspicam.so -rot 180 -y --width 640 --height 480 --fps 25 --quality 75" -o "output_http.so -n -p 3334"
