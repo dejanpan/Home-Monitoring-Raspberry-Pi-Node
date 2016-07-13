@@ -187,7 +187,8 @@ function ApplicationHM(appName, appPort) {
 			this.StreamingBuffer.length = 0;		
 			console.log(this.parent.DateTimeNow() + "Webcam stopped..");			
 		},		
-		Start: function() {			
+	    Start: function() {
+		console.log("In Start function");
 			var ref = {root:this.parent, parent:this};	
 			
 			//make sure streaming not already running & cleanup existing frames from buffer
@@ -204,7 +205,13 @@ function ApplicationHM(appName, appPort) {
 			var fps = this.parent.Config.Settings.monitoring.fps;
 		    //this.parent.exec("./start-webcam.sh " + quality + " " + port + " " + fps);
 		    //TODO: pass quality, port and fps as args
-		    //this.parent.exec("./start-webcam.sh");
+		var child = this.parent.exec("./start-webcam.sh");
+		child.stdout.on('data', function(data) {
+		    console.log('stdout: ' + data);
+		});
+		child.stderr.on('data', function(data) {
+		    console.log('stdout: ' + data);
+		});
 		    this.Active = true;
 		    console.log(this.parent.DateTimeNow() + "Webcam view streaming started..");
 			
