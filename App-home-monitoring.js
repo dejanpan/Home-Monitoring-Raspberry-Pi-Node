@@ -199,7 +199,7 @@ function ApplicationHM(appName, appPort) {
 		var counter = 0;
 		var chunks = [];
 		var send_update = false;
-		var buffer;
+		//var buffer;
 			//make sure webcam is not already running
 			if(this.Active == true) {
 				return;
@@ -232,25 +232,35 @@ function ApplicationHM(appName, appPort) {
 					    
 				    console.log("newFrame.length ", newFrame.length);
 				    //console.log(util.inspect(newFrame, true, 3));
-				    if (newFrame.readInt8(0, 1).toString() == "-1" && newFrame.readInt8(1, 2).toString() == "-40")
+				    // if (newFrame.readInt8(0, 1).toString() == "-1" && newFrame.readInt8(1, 2).toString() == "-40")
+				    // {
+				    // 	buffer = Buffer.concat(chunks);
+				    // 	send_update = true;
+				    // 	chunks = [];
+				    // 	chunks.push(newFrame);
+				    // }
+				    // else
+				    // {
+				    // 	if (newFrame.length > 1000)
+				    // 	{
+				    // 	    chunks.push(newFrame);
+				    // 	}
+				    // }
+				    if (newFrame.length > 1000)
 				    {
-					buffer = Buffer.concat(chunks);
-					send_update = true;
-					chunks = [];
 					chunks.push(newFrame);
-				    }
-				    else
-				    {
-					if (newFrame.length > 1000)
+					if (newFrame.length < 60000)
 					{
-					    chunks.push(newFrame);
+					    var buffer = Buffer.concat(chunks);
+					    send_update = true;
+					    chunks = [];
 					}
 				    }
 				    //if(newFrame !== undefined && newFrame.length > 1000 && ref.parent.Active == true) {
 				    if(newFrame !== undefined && newFrame.length > 0 && ref.parent.Active == true && send_update) {
 					send_update = false;
 					var frameData = {timestamp: ref.root.DateTimeNow(), data: buffer};
-					//console.log("buffer in if", buffer.length);
+					console.log("buffer in if", buffer.length);
 						    //send image data & timestamp to clients
 
 						    if(ref.root.appClients.length > 0)
