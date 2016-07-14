@@ -1,4 +1,5 @@
 var Application = require('./Application');
+fs = require('fs');
 
 //extends generic Application object - add H. Monitoring specific logic
 //-------------------------------------------------------------------------------------
@@ -19,7 +20,8 @@ function ApplicationHM(appName, appPort) {
 	this.optionsMjpgStreamer = {
 		host: 'localhost',
 		port: 3334,
-		path: '/?action=stream',
+	    path: '/?action=stream',
+	    //path: '/?action=snapshot&n',
 		method: 'GET',
 		//headers: {'Transfer-Encoding': 'chunked','Connection':'close', 'Content-Type': 'video/webm'}		
 	};
@@ -192,7 +194,8 @@ function ApplicationHM(appName, appPort) {
 			var ref = {root:this.parent, parent:this};	
 			
 			//make sure streaming not already running & cleanup existing frames from buffer
-			this.StreamingBuffer.length = 0;
+		this.StreamingBuffer.length = 0;
+		var counter = 0;
 			//make sure webcam is not already running
 			if(this.Active == true) {
 				return;
@@ -217,21 +220,39 @@ function ApplicationHM(appName, appPort) {
 			
 			//get streaming data		
 			setTimeout(function(){ 		
-				ref.root.httpStream.get(ref.root.optionsMjpgStreamer, function(res) {
-					res.on("data", function(newFrame) {
-						// only add valid frames, ignore empty captures smaller than 10K
-						if(newFrame !== undefined && newFrame.length > 1000 && ref.parent.Active == true) {
-							var frameData = {timestamp: ref.root.DateTimeNow(), data: newFrame};
-							//send image data & timestamp to clients								
+			    ref.root.httpStream.get(ref.root.optionsMjpgStreamer, function(res) {
+				//				res.setEncoding('binary');
+				//console.log("in get ");
+				res.on("data", function(newFrame) {
+					    // only add valid frames, ignore empty captures smaller than 10K
+					    
+					    //console.log("newFrame.length ", newFrame.length);
+					    if(newFrame !== undefined && newFrame.length > 1000 && ref.parent.Active == true) {
+						var frameData = {timestamp: ref.root.DateTimeNow(), data: newFrame};
+						    //send image data & timestamp to clients
+
 						    if(ref.root.appClients.length > 0)
 						    {
 							ref.root.io.sockets.emit("refresh view", frameData);
 							//add new frame to buffer only if AlertMode is enabled
 //							if(ref.root.AlertMode.Active == true && ref.root.AlertMode.AlarmTriggered == true)
-							ref.parent.StreamingBuffer.push(frameData);
+							//ref.parent.StreamingBuffer.push(frameData);
+					    // 		var imagedata = frameData.data;
+					    // 		counter = counter + 1;
+					    // 		var name = 'door' + counter.toString() + '.jpeg';
+					    // 		fs.writeFile(name, imagedata, 'binary', function(err){
+					    // 		    if (err) throw err
+					    // 		    console.log('File saved. %s', name);
+					    // });
+				
 						    }
 						}
 					});
+				res.on('end', function()
+				       {
+					   console.log('In end.');
+				       }
+				      );
 					res.on("end", function(err){
 						console.log(ref.root.DateTimeNow() + "Webcam HttpStreaming GET ended..");
 					});
