@@ -1,5 +1,6 @@
 var Application = require('./Application');
 fs = require('fs');
+var util = require('util');
 
 //extends generic Application object - add H. Monitoring specific logic
 //-------------------------------------------------------------------------------------
@@ -196,6 +197,9 @@ function ApplicationHM(appName, appPort) {
 			//make sure streaming not already running & cleanup existing frames from buffer
 		this.StreamingBuffer.length = 0;
 		var counter = 0;
+		var chunks = [];
+		var send_update = false;
+		var buffer;
 			//make sure webcam is not already running
 			if(this.Active == true) {
 				return;
@@ -226,9 +230,27 @@ function ApplicationHM(appName, appPort) {
 				res.on("data", function(newFrame) {
 					    // only add valid frames, ignore empty captures smaller than 10K
 					    
-					    //console.log("newFrame.length ", newFrame.length);
-					    if(newFrame !== undefined && newFrame.length > 1000 && ref.parent.Active == true) {
-						var frameData = {timestamp: ref.root.DateTimeNow(), data: newFrame};
+				    console.log("newFrame.length ", newFrame.length);
+				    //console.log(util.inspect(newFrame, true, 3));
+				    if (newFrame.readInt8(0, 1).toString() == "-1" && newFrame.readInt8(1, 2).toString() == "-40")
+				    {
+					buffer = Buffer.concat(chunks);
+					send_update = true;
+					chunks = [];
+					chunks.push(newFrame);
+				    }
+				    else
+				    {
+					if (newFrame.length > 1000)
+					{
+					    chunks.push(newFrame);
+					}
+				    }
+				    //if(newFrame !== undefined && newFrame.length > 1000 && ref.parent.Active == true) {
+				    if(newFrame !== undefined && newFrame.length > 0 && ref.parent.Active == true && send_update) {
+					send_update = false;
+					var frameData = {timestamp: ref.root.DateTimeNow(), data: buffer};
+					//console.log("buffer in if", buffer.length);
 						    //send image data & timestamp to clients
 
 						    if(ref.root.appClients.length > 0)
@@ -239,6 +261,7 @@ function ApplicationHM(appName, appPort) {
 							//ref.parent.StreamingBuffer.push(frameData);
 					    // 		var imagedata = frameData.data;
 					    // 		counter = counter + 1;
+					    // 		console.log('counter %d', counter);
 					    // 		var name = 'door' + counter.toString() + '.jpeg';
 					    // 		fs.writeFile(name, imagedata, 'binary', function(err){
 					    // 		    if (err) throw err
