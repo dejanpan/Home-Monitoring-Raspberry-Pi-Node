@@ -1,6 +1,7 @@
 var Application = require('./Application');
 fs = require('fs');
 var util = require('util');
+require("buffertools").extend();
 
 //extends generic Application object - add H. Monitoring specific logic
 //-------------------------------------------------------------------------------------
@@ -24,9 +25,15 @@ function ApplicationHM(appName, appPort) {
 	path: '/?action=stream',
 	//path: '/?action=snapshot&n',
 	method: 'GET',
+	protocol: 'http:',
+	slashes: true,
+	search: '?action=stream',
+	query: 'action=stream',
+	pathname: '/',
+	href: 'http://localhost:3334/?action=stream'
 	//headers: {'Transfer-Encoding': 'chunked','Connection':'close', 'Content-Type': 'video/webm'}		
     };
-    
+
     //Gpio & Hardware
     //	this.Gpio = require('pi-gpio');
     //	this.Hardware = { MotionSensor : 8, Led : 26, Button : 12 };
@@ -184,6 +191,10 @@ function ApplicationHM(appName, appPort) {
 	StreamingBuffer : [],
 	Active: false,	
 	hd : {},
+	buffer: null,
+	reading: false,
+	bytesWritten: 0,
+	contentLength: null,
 	Stop: function() {
 	    this.parent.exec("sudo pkill mjpg_streamer");
 	    this.Active = false; 
@@ -191,20 +202,26 @@ function ApplicationHM(appName, appPort) {
 	    console.log(this.parent.DateTimeNow() + "Webcam stopped..");			
 	},		
 	Start: function() {
-	    console.log("In Start function");
 	    var ref = {root:this.parent, parent:this};	
 	    
 	    //make sure streaming not already running & cleanup existing frames from buffer
 	    this.StreamingBuffer.length = 0;
-	    var counter = 0;
-	    var chunks = [];
-	    var send_update = false;
-	    //var buffer;
 	    //make sure webcam is not already running
 	    if(this.Active == true) {
 		return;
 		//this.parent.exec("sudo pkill mjpg_streamer");
 	    }
+
+	    var lengthRegex = /Content-Length:\s*(\d+)/i;
+	    // Start of Image
+	    var soi = new Buffer(2);
+	    soi.writeUInt16LE(0xd8ff, 0);
+	    
+	    // End of Image
+	    var eoi = new Buffer(2);
+	    eoi.writeUInt16LE(0xd9ff, 0);
+
+	    var	oldBufferType = process.version.split('.')[0] === 'v0';
 	    
 	    //start webcam video
 	    var port = this.parent.optionsMjpgStreamer.port;
@@ -221,66 +238,104 @@ function ApplicationHM(appName, appPort) {
 	    });
 	    this.Active = true;
 	    console.log(this.parent.DateTimeNow() + "Webcam view streaming started..");
-	    
+
 	    //get streaming data		
 	    setTimeout(function(){ 		
 		ref.root.httpStream.get(ref.root.optionsMjpgStreamer, function(res) {
-		    //				res.setEncoding('binary');
-		    //console.log("in get ");
+		    
 		    res.on("data", function(newFrame) {
-			// only add valid frames, ignore empty captures smaller than 10K
+			var start = newFrame.indexOf(soi);
+			var end = newFrame.indexOf(eoi);
+			var len = (lengthRegex.exec(newFrame.toString('ascii')) || [])[1];
 			
-			console.log("newFrame.length ", newFrame.length);
-			//console.log(util.inspect(newFrame, true, 3));
-			// if (newFrame.readInt8(0, 1).toString() == "-1" && newFrame.readInt8(1, 2).toString() == "-40")
-			// {
-			// 	buffer = Buffer.concat(chunks);
-			// 	send_update = true;
-			// 	chunks = [];
-			// 	chunks.push(newFrame);
-			// }
-			// else
-			// {
-			// 	if (newFrame.length > 1000)
-			// 	{
-			// 	    chunks.push(newFrame);
-			// 	}
-			// }
-			if (newFrame.length > 1000)
-			{
-			    chunks.push(newFrame);
-			    if (newFrame.length < 60000)
+			if (ref.parent.buffer && (ref.parent.reading || start > -1)) {
+			    //TODO: factor into below function
+			    //			    this._readFrame(chunk, start, end);
+			    var bufStart = start > -1 && start < end ? start : 0;
+			    var bufEnd = end > -1 ? end + eoi.length : newFrame.length;
+			    
+			    if (oldBufferType) {
+			    	ref.parent.buffer = ref.parent.buffer.concat(newFrame.slice(bufStart, bufEnd));
+			    } else {
+				newFrame.copy(ref.parent.buffer, ref.parent.bytesWritten, bufStart, bufEnd);
+			    }
+			    
+			    ref.parent.bytesWritten += bufEnd - bufStart;
+			    
+			    if (end > -1 || ref.parent.bytesWritten === ref.parent.contentLength)
 			    {
-				var buffer = Buffer.concat(chunks);
-				send_update = true;
-				chunks = [];
+				//this._sendFrame();
+				ref.parent.reading = false;
+				//				console.log(util.inspect(ref.parent.buffer, true, 3));
+				if (ref.parent.Active == true)
+				{
+				    console.log("buffer len ", ref.parent.buffer.length);
+				    var frameData = {timestamp: ref.root.DateTimeNow(), data: ref.parent.buffer};
+				    if(ref.root.appClients.length > 0)
+				    {
+					ref.root.io.sockets.emit("refresh view", frameData);
+				    }
+				    
+				}
+			    }
+			    else
+			    {
+				ref.parent.reading = true;
 			    }
 			}
-			//if(newFrame !== undefined && newFrame.length > 1000 && ref.parent.Active == true) {
-			if(newFrame !== undefined && newFrame.length > 0 && ref.parent.Active == true && send_update) {
-			    send_update = false;
-			    var frameData = {timestamp: ref.root.DateTimeNow(), data: buffer};
-			    console.log("buffer in if", buffer.length);
-			    //send image data & timestamp to clients
+			
+			if (len) {
+			    //   this._initFrame(+len, chunk, start, end);
+			    ref.parent.contentLength = +len; //+len converts it to numeric representation
+			    ref.parent.buffer = new Buffer(+len);
+			    if (oldBufferType)
+			    {
+			    	ref.parent.buffer = new Buffer(0);
+			    }
+			    // Fill the buffer so we don't leak random bytes
+			    // more info: https://nodejs.org/api/buffer.html#buffer_new_buffer_size
+			    ref.parent.buffer.fill(0);
+			    ref.parent.bytesWritten = 0;
 
-			    if(ref.root.appClients.length > 0)
-			    {
-				ref.root.io.sockets.emit("refresh view", frameData);
-				//add new frame to buffer only if AlertMode is enabled
-				//							if(ref.root.AlertMode.Active == true && ref.root.AlertMode.AlarmTriggered == true)
-				//ref.parent.StreamingBuffer.push(frameData);
-				// 		var imagedata = frameData.data;
-				// 		counter = counter + 1;
-				// 		console.log('counter %d', counter);
-				// 		var name = 'door' + counter.toString() + '.jpeg';
-				// 		fs.writeFile(name, imagedata, 'binary', function(err){
-				// 		    if (err) throw err
-				// 		    console.log('File saved. %s', name);
-				// });
+			    var hasStart = typeof start !== 'undefined' && start > -1;
+			    var hasEnd = typeof end !== 'undefined' && end > -1 && end > start;
+
+			    if (hasStart) {
+				var bufEnd2 = newFrame.length;
+
+				if (hasEnd) {
+				    bufEnd2 = end + eoi.length;
+				}
 				
+				if (oldBufferType) {
+				    ref.parent.buffer = ref.parent.buffer.concat(newFrame.slice(start, bufEnd2));
+				} else {
+				    newFrame.copy(ref.parent.buffer, 0, start, bufEnd2);
+				}
+
+				ref.parent.bytesWritten = newFrame.length - start;
+				// If we have the eoi bytes, send the frame
+				if (hasEnd) {
+				    //this._sendFrame();
+				    ref.parent.reading = false;
+
+				    if (ref.parent.Active == true)
+				    {
+					console.log("buffer len ", ref.parent.buffer.length);
+					var frameData = {timestamp: ref.root.DateTimeNow(), data: ref.parent.buffer};
+					if(ref.root.appClients.length > 0)
+					{
+					    ref.root.io.sockets.emit("refresh view", frameData);
+					}
+
+				    }
+
+				} else {
+				    ref.parent.reading = true;
+				}
 			    }
 			}
-		    });
+		    }); //end on data
 		    res.on('end', function()
 			   {
 			console.log('In end.');

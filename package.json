@@ -21,6 +21,7 @@
   "author": "Andrei Oros",
   "license": "MIT",
   "dependencies": {
+    "buffertools": "^2.1.4",
     "express": "^4.12.3",
     "ftp": "^0.3.10",
     "http-auth": "^2.2.8",
