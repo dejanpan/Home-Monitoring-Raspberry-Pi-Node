@@ -248,7 +248,7 @@ function ApplicationHM(appName, appPort) {
 		ref.root.httpStream.get(ref.root.optionsMjpgStreamer, function(res) {
 		    
 		    res.on("data", function(newFrame) {
-			//console.log("newFrame len ", newFrame.length);
+			console.log("newFrame len ", newFrame.length);
 			var start = newFrame.indexOf(soi);
 			var end = newFrame.indexOf(eoi);
 			var len = (lengthRegex.exec(newFrame.toString('ascii')) || [])[1];
@@ -274,7 +274,7 @@ function ApplicationHM(appName, appPort) {
 				//				console.log(util.inspect(ref.parent.buffer, true, 3));
 				if (ref.parent.Active == true)
 				{
-				    //console.log("buffer len ", ref.parent.buffer.length);
+				    console.log("buffer len ", ref.parent.buffer.length);
 				    var frameData = {timestamp: ref.root.DateTimeNow(), data: ref.parent.buffer};
 				    if(ref.root.appClients.length > 0)
 				    {
