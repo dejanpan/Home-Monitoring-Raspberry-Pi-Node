@@ -6,9 +6,11 @@ require("buffertools").extend();
 //extends generic Application object - add H. Monitoring specific logic
 //-------------------------------------------------------------------------------------
 function ApplicationHM(appName, appPort) {
-    
+
+    console.log("before base");
     //call base constructor
     Application.call(this,appName, appPort);
+    console.log("after base");
     
     //client connections list
     this.appClients = [];
@@ -195,6 +197,7 @@ function ApplicationHM(appName, appPort) {
 	reading: false,
 	bytesWritten: 0,
 	contentLength: null,
+
 	Stop: function() {
 	    this.parent.exec("sudo pkill mjpg_streamer");
 	    this.Active = false; 
@@ -225,11 +228,12 @@ function ApplicationHM(appName, appPort) {
 	    
 	    //start webcam video
 	    var port = this.parent.optionsMjpgStreamer.port;
-	    var quality = this.parent.Config.Settings.monitoring.quality;
+	    var width = this.parent.Config.Settings.monitoring.width;
+	    var height = this.parent.Config.Settings.monitoring.height;
 	    var fps = this.parent.Config.Settings.monitoring.fps;
 	    //this.parent.exec("./start-webcam.sh " + quality + " " + port + " " + fps);
 	    //TODO: pass quality, port and fps as args
-	    var child = this.parent.exec("./start-webcam.sh");
+	    var child = this.parent.exec("./start-webcam.sh " + width + " " + height + " " + port + " " + fps);
 	    child.stdout.on('data', function(data) {
 		console.log('stdout: ' + data);
 	    });
@@ -244,6 +248,7 @@ function ApplicationHM(appName, appPort) {
 		ref.root.httpStream.get(ref.root.optionsMjpgStreamer, function(res) {
 		    
 		    res.on("data", function(newFrame) {
+			//console.log("newFrame len ", newFrame.length);
 			var start = newFrame.indexOf(soi);
 			var end = newFrame.indexOf(eoi);
 			var len = (lengthRegex.exec(newFrame.toString('ascii')) || [])[1];
@@ -269,7 +274,7 @@ function ApplicationHM(appName, appPort) {
 				//				console.log(util.inspect(ref.parent.buffer, true, 3));
 				if (ref.parent.Active == true)
 				{
-				    console.log("buffer len ", ref.parent.buffer.length);
+				    //console.log("buffer len ", ref.parent.buffer.length);
 				    var frameData = {timestamp: ref.root.DateTimeNow(), data: ref.parent.buffer};
 				    if(ref.root.appClients.length > 0)
 				    {
@@ -357,6 +362,7 @@ function ApplicationHM(appName, appPort) {
 	    this.Start();
 	}
     };
+    console.log("end of App-home-monitoring constructor");
 };
 
 
@@ -462,7 +468,8 @@ ApplicationHM.prototype.ClientsListen = function() {
 	});
 
 	socket.on('update config quality', function(newConfig) {
-	    //update .ini file			
+	    //update .ini file
+	    console.log("newConfig ", newConfig);
 	    console.log(parent.DateTimeNow() + "Configuration <quality> changed by client..");
 	    parent.Config.Settings = newConfig;
 	    parent.Config.Write();	
@@ -519,7 +526,8 @@ ApplicationHM.prototype.Exit = function(parent, data, err) {
     //	parent.Gpio.write(parent.Hardware.Led, 0, function(){		
     //		parent.Gpio.close(parent.Hardware.Led);
     //exit
-    //		process.exit(0);
+    console.log(parent.DateTimeNow() + " Closing application App-home-monitoring.js");	
+    process.exit(0);
     //	});	
 };
 
