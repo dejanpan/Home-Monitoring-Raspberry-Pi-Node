@@ -5,24 +5,25 @@ this.FtpService = {};
 this.FtpService = new this.Ftp();		
 
 this.FtpService.connect({
-	host: "",
+	host: "localhost",
 	port: 21,
-	user: "",
-	password: ""
+	user: "ftpup",
+	password: "ftpup"
 },function(err){console.log(err);});
+
 console.log("(!) Alert - ALARM - FTP - connecting...");
 
 var parent = this;
 
 this.FtpService.on('ready', function(err) {
-	console.log(err);
+    console.log("err ", err);
 	
 	console.log("(!) Alert - ALARM - FTP - uploading data..");				
-	parent.fs.writeFile("./test.jpg", "test", function(err) {
-		if(err) { return console.log(err); }					
+	parent.fs.writeFile("./test1.jpg", "test", function(err) {
+	    if(err) { return console.log("writeFile ", err); }					
 	});
 	
-	parent.FtpService.put("./test.jpg", "" + "/rpiHomeMonitoring/test.jpg", function(err) {
+	parent.FtpService.put("./test1.jpg", "" + "test1.jpg", function(err) {
 		if (!err) console.log("File transferred successfully!");
 		else console.log(err);
 	});				
