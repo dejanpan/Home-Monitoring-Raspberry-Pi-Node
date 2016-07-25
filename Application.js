@@ -84,7 +84,7 @@ Application.prototype.Exit = function(data) {
 
 // get current DateTime as formatted string
 Application.prototype.DateTimeNow = function() {
-    return (new Date()).toISOString().replace(/-/g,'_').replace(/:/g,'-') + " ";
+    return (new Date()).toISOString().replace(/-/g,'_').replace(/:/g,'-') + "_";
 };
 
 
