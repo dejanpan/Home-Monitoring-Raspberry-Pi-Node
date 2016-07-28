@@ -13,6 +13,8 @@ function Application(appName, appPort)
     this.app = this.express();
     this.io = {};
     this.staticDirPath = '/static';
+    //route for viewing snapshots
+    this.snapshots = '/snapshots';
 
     //system processes actions
     this.sys = require('sys');
@@ -54,11 +56,22 @@ Application.prototype.Init = function() {
     // get app settings from local config file
     this.Config.parent = this;
     this.Config.Load();
+    console.log("config ", this.Config.Settings);
 
+    //create snapshots dir
+    if (!this.fs.existsSync(__dirname + this.staticDirPath + this.snapshots)){
+	this.fs.mkdirSync(__dirname + this.staticDirPath + this.snapshots);
+    }
     // init express app	
     this.digest = this.auth.digest({ realm: "Private", file: __dirname + "/htdigest" });	
     this.app.use(this.auth.connect(this.digest));
     this.app.use(this.express.static(__dirname + this.staticDirPath));
+    this.app.use(this.snapshots, require('node-gallery')({
+	staticFiles :  this.staticDirPath + '/' + this.snapshots,
+	urlRoot : this.snapshots,
+	title : 'D&D Residence - Main Door'
+    }));
+
     this.app.set('port', this.port);
 
     //init server
