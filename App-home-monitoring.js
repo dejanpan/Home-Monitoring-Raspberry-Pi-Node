@@ -2,6 +2,7 @@ var Application = require('./Application');
 fs = require('fs');
 var util = require('util');
 require("buffertools").extend();
+var nodemailer = require('nodemailer');
 
 //extends generic Application object - add H. Monitoring specific logic
 //-------------------------------------------------------------------------------------
@@ -41,14 +42,18 @@ function ApplicationHM(appName, appPort) {
     //this.Hardware = { MotionSensor : 8, Led : 26, Button : 12 };
     this.Hardware = { MotionSensor : 7 };
     
-    //TODO: replace with Email
     //sms service twilio 
     //	this.SmsAPI = require('twilio');
     //	this.SmsService = {};	
+    // create reusable transporter object using the default SMTP transport
     
+    this.emailService = {};
+    this.emailOptions = {};
+
+
     //ftp 
-    this.Ftp = require("ftp");
-    this.FtpService = {};
+    //this.Ftp = require("ftp");
+    //this.FtpService = {};
 
     
     //alert mode and alarm
@@ -124,8 +129,8 @@ function ApplicationHM(appName, appPort) {
     		//reenable motion detection after the predefined Alarm TimeSpan
     		setTimeout(function(){
     		    parent.AlertMode.AlarmTriggered = false; //suspend alarm
-    		    clearInterval(parent.AlertMode.AlarmTimer); //stop ftp snapshots upload										
-    		    parent.FtpService.end(); //close ftp connection					
+    		    clearInterval(parent.AlertMode.AlarmTimer); //stop snapshot writting
+    		    //parent.FtpService.end(); //close ftp connection					
     		    parent.AlertMode.ActiveMotionSensor = true;
     		    parent.AlertMode.AlarmCounter = 0;					
 
@@ -145,7 +150,6 @@ function ApplicationHM(appName, appPort) {
     		if(this.parent.Webcam.Active == false)
     		    this.parent.Webcam.Start();
 
-		//TODO: replace with email sending
 		// 			//send sms notification
 		// 			//init sms service
 		// 			this.parent.SmsService = new this.parent.SmsAPI(this.parent.Config.Settings.sms.sid, this.parent.Config.Settings.sms.token); 
@@ -156,39 +160,80 @@ function ApplicationHM(appName, appPort) {
 		// 			});
 		// 			console.log(this.parent.DateTimeNow() + "(!) Alert - ALARM - sms notification sent");
     
-		// 			// upload data from streaming buffer to FTP		 
-    		this.parent.FtpService = new this.parent.Ftp();	
-    		this.parent.FtpService.connect({
-    		    host: this.parent.Config.Settings.ftp.server,
-    		    port: this.parent.Config.Settings.ftp.port,
-    		    user: this.parent.Config.Settings.ftp.user,
-    		    password: this.parent.Config.Settings.ftp.pass,
-    		    keepalive: 10000
-//		    console.log("ftp ", host, port, user, password);
-    		});
-    		console.log(this.parent.DateTimeNow() + "(!) Alert - ALARM - FTP - connecting...");			
-    
-    		this.parent.FtpService.on('ready', function() {
-    		    console.log(parent.DateTimeNow() + "(!) Alert - ALARM - FTP - uploading data..");			
+		// 			// upload data from streaming buffer to FTP
+		this.parent.emailService = nodemailer.createTransport('smtps://' + this.parent.Config.Settings.email.user + '%40gmail.com:' + this.parent.Config.Settings.email.password + '@smtp.gmail.com');
+		// setup e-mail data with unicode symbols
+		this.parent.emailOptions = {
+		    from: this.parent.Config.Settings.email.from,
+		    to: this.parent.Config.Settings.email.to,
+		    subject: this.parent.Config.Settings.email.subject, // Subject line 
+		    text: this.parent.Config.Settings.email.text
+		};
+		
+		this.parent.emailService.sendMail(this.parent.emailOptions, function(error, info){
+		    if(error)
+		    {
+			console.log(error);
+		    }
+		    console.log('Message sent: ' + info.response);
+		});
+		
+		//write snapshots into static folder
+		var foldername = parent.DateTimeNow();
+		console.log(parent.DateTimeNow() + "Saving data to " + foldername);			
     		    parent.AlertMode.AlarmTimer = setInterval(function(){	
-    			if(parent.Webcam.StreamingBuffer.length > 0) {
+    			if(parent.Webcam.StreamingBuffer.length > 0)
+			{
+			    if (!parent.fs.existsSync(__dirname + parent.staticDirPath + parent.snapshots + '/' + foldername)){
+				parent.fs.mkdirSync(__dirname + parent.staticDirPath  + parent.snapshots + '/' + foldername);
+			    }
     			    var frame = parent.Webcam.StreamingBuffer.pop().data;
 			    var filename = parent.DateTimeNow() + ".jpg";
 			    console.log("frame: ", filename);
-			    parent.FtpService.put(frame, filename, function(err){
-    				if(err) {
-    				    console.log(parent.DateTimeNow() + "Error - Alarm Mode - Alarm Notify - FTP > " + err);  
-    				    parent.FtpService.destroy();							
-    				}
-    			    });	
+			    parent.fs.writeFile(__dirname + parent.staticDirPath  + parent.snapshots + '/' + foldername + '/' + filename, frame, function(error){
+				if (error) {
+				    console.error("write error:  " + error.message);
+				} else {
+				    console.log("Successful Write to " + __dirname + parent.staticDirPath  + parent.snapshots + '/' + foldername + '/' + filename);
+				}
+			    }
+					       );
     			}
-    		    },200, parent); //0.2 second for each file upload						
-    		}, parent);
+    		    },200, parent); //0.2 second for each file write
 		
-    		this.parent.FtpService.on('error', function(err) {
-    		    console.log(parent.DateTimeNow() + "(!) Error > FTP > " + err);			
-    		    parent.FtpService.destroy();
-    		}, parent);
+    	// 	this.parent.FtpService = new this.parent.Ftp();	
+//     		this.parent.FtpService.connect({
+//     		    host: this.parent.Config.Settings.ftp.server,
+//     		    port: this.parent.Config.Settings.ftp.port,
+//     		    user: this.parent.Config.Settings.ftp.user,
+//     		    password: this.parent.Config.Settings.ftp.pass,
+//     		    keepalive: 10000
+// //		    console.log("ftp ", host, port, user, password);
+//     		});
+//     		console.log(this.parent.DateTimeNow() + "(!) Alert - ALARM - FTP - connecting...");			
+    
+//     		this.parent.FtpService.on('ready', function() {
+//     		    console.log(parent.DateTimeNow() + "(!) Alert - ALARM - FTP - uploading data..");			
+//     		    parent.AlertMode.AlarmTimer = setInterval(function(){	
+//     			if(parent.Webcam.StreamingBuffer.length > 0)
+// 			{
+//     			    var frame = parent.Webcam.StreamingBuffer.pop().data;
+// 			    var filename = parent.DateTimeNow() + ".jpg";
+// 			    console.log("frame: ", filename);
+// 			    parent.FtpService.put(frame, filename, function(err){
+//     				if(err) {
+//     				    console.log(parent.DateTimeNow() + "Error - Alarm Mode - Alarm Notify - FTP > " + err);  
+//     				    parent.FtpService.destroy();							
+//     				}
+//     			    });	
+//     			}
+//     		    },200, parent); //0.2 second for each file upload						
+//     		}, parent);
+		
+//     		this.parent.FtpService.on('error', function(err) {
+//     		    console.log(parent.DateTimeNow() + "(!) Error > FTP > " + err);			
+//     		    parent.FtpService.destroy();
+//     		}, parent);
     	    }
     	}
     }; //end AlertMode 
@@ -333,7 +378,7 @@ function ApplicationHM(appName, appPort) {
 
 				    if (ref.parent.Active == true)
 				    {
-					console.log("buffer len ", ref.parent.buffer.length);
+//					console.log("buffer len ", ref.parent.buffer.length);
 					var frameData = {timestamp: ref.root.DateTimeNow(), data: ref.parent.buffer};
 					if(ref.root.appClients.length > 0)
 					{
@@ -365,7 +410,7 @@ function ApplicationHM(appName, appPort) {
 		}).on("error", function(err) { 
 		    console.log(ref.root.DateTimeNow() + "Error > HttpStream 2 > " + err);
 		});
-	    },3000, ref); //delay to make sure webcam had time to init			
+	    },1000, ref); //delay to make sure webcam had time to init			
 	},		
 	Restart : function() {
 	    this.Stop();
@@ -401,7 +446,7 @@ ApplicationHM.prototype.Init = function() {
     this.Gpio.open(this.Hardware.MotionSensor, "input", function(err){
     	setInterval(function(){ 
     	    parent.Gpio.read(parent.Hardware.MotionSensor, function(error,value){
-		console.log("value: ", value);
+//		console.log("value: ", value);
     		if(parent.AlertMode.Active == true && parent.AlertMode.ActiveMotionSensor == true && value == 1){					
     		    console.log(parent.DateTimeNow() + "(!) Alert - PIR - motion detected");
     		    //send sms notification & upload video frames
