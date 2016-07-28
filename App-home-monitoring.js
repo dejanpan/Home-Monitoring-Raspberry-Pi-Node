@@ -199,7 +199,7 @@ function ApplicationHM(appName, appPort) {
 			    }
 					       );
     			}
-    		    },200, parent); //0.2 second for each file write
+    		    },100, parent); //0.1 second for each file write
 		
     	// 	this.parent.FtpService = new this.parent.Ftp();	
 //     		this.parent.FtpService.connect({
