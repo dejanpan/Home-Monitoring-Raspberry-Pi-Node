@@ -41,7 +41,11 @@ function ApplicationHM(appName, appPort) {
     this.Gpio = require('pi-gpio');
     //this.Hardware = { MotionSensor : 8, Led : 26, Button : 12 };
     this.Hardware = { MotionSensor : 7 };
-    
+
+    //lights
+    this.Milight = require('node-milight-promise').MilightController;
+    this.commands = require('node-milight-promise').commands;
+
     //sms service twilio 
     //	this.SmsAPI = require('twilio');
     //	this.SmsService = {};	
@@ -55,6 +59,22 @@ function ApplicationHM(appName, appPort) {
     //this.Ftp = require("ftp");
     //this.FtpService = {};
 
+    this.Light = {
+	parent : {},
+	name : null,
+	zone : 1,
+	state : 0,
+	milight: null,
+	On : function(z, state){
+	    var parent = this.parent;
+	    this.milight.sendCommands(parent.commands.rgbw.on(z), parent.commands.rgbw.whiteMode(z), parent.commands.rgbw.brightness(100));
+	},
+	
+	Off : function(z, state){
+	    var parent = this.parent;
+	    this.milight.sendCommands(parent.commands.rgbw.off(z));
+	}
+    };//end Light mode
     
     //alert mode and alarm
     this.AlertMode = {
@@ -237,6 +257,7 @@ function ApplicationHM(appName, appPort) {
     	    }
     	}
     }; //end AlertMode 
+
     
     //webcam setup
     this.Webcam = {		
@@ -433,7 +454,13 @@ ApplicationHM.prototype.Init = function() {
     var parent = this;		
     this.AlertMode.parent = this;
     this.Webcam.parent = this;
-    var alert = parent.Config.Settings.monitoring.alert;	
+    this.Light.parent = this;
+    this.Light.milight = new this.Milight({
+	ip: parent.Config.Settings.lights.ip,	
+	delayBetweenCommands:  parent.Config.Settings.lights.delayBetweenCommands,
+	commandRepeat:  parent.Config.Settings.lights.commandRepeat
+    });
+    //var alert = parent.Config.Settings.monitoring.alert;	
     
     //Hardware
     //init
@@ -546,6 +573,37 @@ ApplicationHM.prototype.ClientsListen = function() {
 	    parent.AlertMode.UpdateState(parent.Config.Settings.monitoring.alert);		
 	});
 
+	socket.on('update config light', function(newConfig) {
+	    console.log(parent.DateTimeNow() + "hallway light state " + newConfig.lights.hallway.zone, newConfig.lights.hallway.state);
+	    console.log(parent.DateTimeNow() + "bedroom light state " + newConfig.lights.bedroom.zone, newConfig.lights.bedroom.state);
+	    // var light_ = new Milight({
+	    // 	ip: "192.168.178.54",
+	    // 	delayBetweenCommands: 75,
+	    // 	commandRepeat: 2
+	    // }),
+	    // 	zone = 1;
+	    if (newConfig.lights.hallway.state)
+	    {
+		parent.Light.On(newConfig.lights.hallway.zone, newConfig.lights.hallway.state);
+	    }
+	    else
+	    {
+		parent.Light.Off(newConfig.lights.hallway.zone, newConfig.lights.hallway.state);
+	    }
+	    
+	    if (newConfig.lights.bedroom.state)
+	    {
+		parent.Light.On(newConfig.lights.bedroom.zone, newConfig.lights.bedroom.state);
+	    }
+	    else
+	    {
+		parent.Light.Off(newConfig.lights.bedroom.zone, newConfig.lights.bedroom.state);
+	    }
+	    parent.Config.Settings = newConfig;
+	    parent.Config.Write();	
+	    
+	});
+
 	socket.on('error', function(err) {
 	    console.log(parent.DateTimeNow() + "Error > Socket > " + err);
 	    socket.destroy();
@@ -580,6 +638,11 @@ ApplicationHM.prototype.Exit = function(parent, data, err) {
     parent.Webcam.Active = false;	
     //disable hardware & exit
     parent.Gpio.close(parent.Hardware.MotionSensor);
+    //destroy Milight object
+    console.log("Destroying milight");
+    parent.Light.milight.close().then(function () {
+    	console.log("All command have been executed - closing Milight");
+    });
     //parent.Gpio.close(parent.Hardware.Button);		
     //parent.Gpio.write(parent.Hardware.Led, 0, function(){		
     //parent.Gpio.close(parent.Hardware.Led);

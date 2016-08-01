@@ -1,4 +1,3 @@
-/* global io */
 /* global $ */
 $(document).ready(function() 
 		  {
@@ -13,6 +12,8 @@ $(document).ready(function()
 	quality720p : $("#quality-720p"),
 	quality1080p : $("#quality-1080p"),
 	alertMode : $("#alert-mode"),
+	light_hallway : $("#light-hallway"),
+	light_bedroom : $("#light-bedroom"),
 	imgContainer : $("#img-container"),
 	img : $("#image-view"),
 	imgPreloader : $("#image-preloader"),
@@ -72,6 +73,19 @@ $(document).ready(function()
 	    break;
 	}
 	ui.alertMode.prop("checked", appConfig.monitoring.alert);
+
+	if (appConfig.lights.hallway.state != ui.light_hallway.prop("checked"))
+	{
+	    ui.light_hallway.bootstrapToggle('toggle');
+	}
+
+	if (appConfig.lights.bedroom.state != ui.light_bedroom.prop("checked"))
+	{
+	    ui.light_bedroom.bootstrapToggle('toggle');
+	}
+
+	console.log("from server ui.light_hallway.prop(checked)", ui.light_hallway.prop("checked"));
+
     });
     
     
@@ -101,11 +115,25 @@ $(document).ready(function()
     function ConfigUpdateAlert() {	
 	appConfig.monitoring.alert = ui.alertMode.prop('checked');
 	socket.emit('update config alert', appConfig);
+    }
+
+    function ConfigUpdateLight() {
+	appConfig.lights.bedroom.state = ui.light_bedroom.prop('checked');
+	appConfig.lights.hallway.state = ui.light_hallway.prop('checked');
+	console.log("in ConfigUpdateLight()");
+	socket.emit('update config light', appConfig);
     }	
-    
     
     //bind ui objects to function associated with config settings update
     ui.alertMode.click(function(){ ConfigUpdateAlert(); });
+
+    ui.light_hallway.change(function(){
+    	ConfigUpdateLight();
+    });
+    
+    ui.light_bedroom.change(function(){
+    	ConfigUpdateLight();
+    });
     
     ui.quality480p.change(function(){
 	appConfig.monitoring.width = "640";

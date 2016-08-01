@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+ <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -11,7 +11,8 @@
 	<meta name="msapplication-TileImage" content="favicon.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="favicon180x180.png">
 	<title>Home Monitoring</title>
-    <link rel="stylesheet" href="css/bootstrap.min.css">
+	<link href="css/bootstrap-toggle.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
 	<link rel="stylesheet" href="css/style.css" />
   </head>
 
@@ -66,8 +67,22 @@
       <div class="row" style="text-align:center">		
 	<a href="snapshots" target="_blank">Snapshots</a>
       </div>
-	  
 
+      <div class="checkbox">
+	<br>
+	<p>Hallway Light </p>
+	<!-- Toggle switch -->
+	<label>
+	  <input type="checkbox" id="light-hallway" data-toggle="toggle">
+	</label>
+	<br>
+	<p>Bedroom Light </p>
+	<!-- Toggle switch -->
+	<label>
+	  <input type="checkbox" id="light-bedroom" data-toggle="toggle">
+	</label>
+      </div>
+      
       <footer class="footer">
         <p>
 	  <!-- <a href="https://github.com/orosandrei" target="_blank">github.com/orosandrei</a> -->
@@ -81,6 +96,6 @@
 	<script type="text/javascript" src="js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="socket.io/socket.io.js"></script>
 	<script type="text/javascript" src="js/script.js"></script>	
-
+	<script src="js/bootstrap-toggle.min.js"></script>
   </body>
 </html>
