@@ -159,17 +159,20 @@ function ApplicationHM(appName, appPort) {
     			parent.io.sockets.emit('alarm', false);
     		    }
     		    else{
-    			//stop webcam if no client connected & alarm over
+    			//stop webcam and hallways light if no client connected & alarm over
     			parent.Webcam.Stop();
-    		    }		
-    
+    		    }
+    		    parent.Light.Off(1, false);
     		    console.log(parent.DateTimeNow() + "(i) Alert - Alarm over");
     		}, this.parent.AlertMode.AlarmTimeSpan * 60000, parent); //timespan is in minutes so we convert to ms
     
-    		//turn on webcam streaming if not already started
+    		//turn on webcam streaming if not already started and light in hallway
     		if(this.parent.Webcam.Active == false)
+		{
     		    this.parent.Webcam.Start();
-
+		}
+		
+		this.parent.Light.On(1, true);
 		// 			//send sms notification
 		// 			//init sms service
 		// 			this.parent.SmsService = new this.parent.SmsAPI(this.parent.Config.Settings.sms.sid, this.parent.Config.Settings.sms.token); 
