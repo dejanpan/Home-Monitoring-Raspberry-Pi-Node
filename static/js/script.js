@@ -1,6 +1,15 @@
 /* global $ */
 $(document).ready(function() 
 		  {
+
+    var DEBUG = false;
+    if(!DEBUG){
+	if(!window.console) window.console = {};
+	var methods = ["log", "debug", "warn", "info"];
+	for(var i=0;i<methods.length;i++){
+	    console[methods[i]] = function(){};
+	}
+    }
     //disable tooltips for touch-enabled screens
     if(!('ontouchstart' in document.documentElement))
 	$('[data-toggle="tooltip"]').tooltip({container: 'body'});
@@ -12,8 +21,8 @@ $(document).ready(function()
 	quality720p : $("#quality-720p"),
 	quality1080p : $("#quality-1080p"),
 	alertMode : $("#alert-mode"),
-	light_hallway : $("#light-hallway"),
-	light_bedroom : $("#light-bedroom"),
+	hallway : $("#light-hallway"),
+	bedroom : $("#light-bedroom"),
 	imgContainer : $("#img-container"),
 	img : $("#image-view"),
 	imgPreloader : $("#image-preloader"),
@@ -74,18 +83,14 @@ $(document).ready(function()
 	}
 	ui.alertMode.prop("checked", appConfig.monitoring.alert);
 
-	if (appConfig.lights.hallway.state != ui.light_hallway.prop("checked"))
+	for (var key in appConfig.lights.rooms)
 	{
-	    ui.light_hallway.bootstrapToggle('toggle');
+	    if (appConfig.lights.rooms[key].state != ui[appConfig.lights.rooms[key].name].prop("checked"))
+	    {
+		console.log("toggling %s config and ui ", appConfig.lights.rooms[key].name, appConfig.lights.rooms[key].state, ui[appConfig.lights.rooms[key].name].prop("checked"));
+		ui[appConfig.lights.rooms[key].name].bootstrapToggle('toggle');
+	    }
 	}
-
-	if (appConfig.lights.bedroom.state != ui.light_bedroom.prop("checked"))
-	{
-	    ui.light_bedroom.bootstrapToggle('toggle');
-	}
-
-	console.log("from server ui.light_hallway.prop(checked)", ui.light_hallway.prop("checked"));
-
     });
     
     
@@ -118,8 +123,10 @@ $(document).ready(function()
     }
 
     function ConfigUpdateLight() {
-	appConfig.lights.bedroom.state = ui.light_bedroom.prop('checked');
-	appConfig.lights.hallway.state = ui.light_hallway.prop('checked');
+	for (var key in appConfig.lights.rooms)
+	{
+	    appConfig.lights.rooms[key].state = ui[appConfig.lights.rooms[key].name].prop("checked");
+	}
 	console.log("in ConfigUpdateLight()");
 	socket.emit('update config light', appConfig);
     }	
@@ -127,11 +134,11 @@ $(document).ready(function()
     //bind ui objects to function associated with config settings update
     ui.alertMode.click(function(){ ConfigUpdateAlert(); });
 
-    ui.light_hallway.change(function(){
+    ui.hallway.change(function(){
     	ConfigUpdateLight();
     });
     
-    ui.light_bedroom.change(function(){
+    ui.bedroom.change(function(){
     	ConfigUpdateLight();
     });
     

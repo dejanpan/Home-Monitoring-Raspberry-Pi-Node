@@ -574,31 +574,18 @@ ApplicationHM.prototype.ClientsListen = function() {
 	});
 
 	socket.on('update config light', function(newConfig) {
-	    console.log(parent.DateTimeNow() + "hallway light state " + newConfig.lights.hallway.zone, newConfig.lights.hallway.state);
-	    console.log(parent.DateTimeNow() + "bedroom light state " + newConfig.lights.bedroom.zone, newConfig.lights.bedroom.state);
-	    // var light_ = new Milight({
-	    // 	ip: "192.168.178.54",
-	    // 	delayBetweenCommands: 75,
-	    // 	commandRepeat: 2
-	    // }),
-	    // 	zone = 1;
-	    if (newConfig.lights.hallway.state)
+	for (var key in newConfig.lights.rooms)
+	{
+	    console.log(parent.DateTimeNow() + " " + newConfig.lights.rooms[key].name + " light zone " + newConfig.lights.rooms[key].zone + " light state " + newConfig.lights.rooms[key].state);
+	    if (newConfig.lights.rooms[key].state)
 	    {
-		parent.Light.On(newConfig.lights.hallway.zone, newConfig.lights.hallway.state);
+		parent.Light.On(newConfig.lights.rooms[key].zone, newConfig.lights.rooms[key].state);
 	    }
 	    else
 	    {
-		parent.Light.Off(newConfig.lights.hallway.zone, newConfig.lights.hallway.state);
+		parent.Light.Off(newConfig.lights.rooms[key].zone, newConfig.lights.rooms[key].state);
 	    }
-	    
-	    if (newConfig.lights.bedroom.state)
-	    {
-		parent.Light.On(newConfig.lights.bedroom.zone, newConfig.lights.bedroom.state);
-	    }
-	    else
-	    {
-		parent.Light.Off(newConfig.lights.bedroom.zone, newConfig.lights.bedroom.state);
-	    }
+        }
 	    parent.Config.Settings = newConfig;
 	    parent.Config.Write();	
 	    
