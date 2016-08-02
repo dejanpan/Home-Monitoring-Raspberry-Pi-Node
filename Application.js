@@ -66,6 +66,19 @@ Application.prototype.Init = function() {
     this.digest = this.auth.digest({ realm: "Private", file: __dirname + "/htdigest" });	
     this.app.use(this.auth.connect(this.digest));
     this.app.use(this.express.static(__dirname + this.staticDirPath));
+    
+    this.app.get("/security", function(req, res){
+	res.redirect("security.html");
+    });
+
+    this.app.get("/lights", function(req, res){
+	res.redirect("lights.html");
+    });
+
+    this.app.get("/fridge", function(req, res){
+	res.redirect("fridge.html");
+    });
+    
     this.app.use(this.snapshots, require('node-gallery')({
 	staticFiles :  this.staticDirPath + '/' + this.snapshots,
 	urlRoot : this.snapshots,

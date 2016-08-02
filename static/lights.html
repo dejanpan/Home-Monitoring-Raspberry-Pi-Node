@@ -1,0 +1,68 @@
+ <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="apple-mobile-web-app-capable" content="yes"/>
+	<meta name="mobile-web-app-capable" content="yes"/>
+	<link rel="icon" href="favicon.png">
+	<meta name="msapplication-TileColor" content="#fff">
+	<meta name="msapplication-TileImage" content="favicon.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="favicon180x180.png">
+	<title>Home Monitoring</title>
+	<link href="css/bootstrap-toggle.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="css/bootstrap.icon-large.min.css">
+  </head>
+
+  <body>
+    
+    <div id="wrap" class="container"> 
+
+      <table class="table">
+	<thead class="thead-inverse">
+	  <tr>
+	    <th><i class="icon-large icon-lightbulb"></i></th>
+	    <th>Hallway</th>
+	    <th>Bedroom</th>
+	    <th>Workroom </th>
+	  </tr>
+	</thead>
+	<tbody>
+	  <tr>
+	    <th scope="row">1</th>
+	    <td>
+	      <label>
+		<input type="checkbox" id="light-hallway" data-toggle="toggle">
+	      </label>
+	    </td>
+	    <td>
+	      <label>
+		<input type="checkbox" id="light-bedroom" data-toggle="toggle">
+	      </label>
+	    </td>
+	    <td>
+	      <label>
+		<input type="checkbox" id="light-workroom" data-toggle="toggle" disabled>
+	      </label>
+	    </td>
+	  </tr>
+	</tbody>
+      </table>
+      
+      <footer class="footer">
+        <p>
+	  D&amp;D Residence  
+	</p>
+      </footer>
+
+    </div> <!-- /container -->
+	
+    <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="js/script.js"></script>	
+    <script src="js/bootstrap-toggle.min.js"></script>
+  </body>
+ </html>
