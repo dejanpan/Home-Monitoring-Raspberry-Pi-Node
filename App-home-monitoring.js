@@ -207,17 +207,17 @@ function ApplicationHM(appName, appPort) {
     		    parent.AlertMode.AlarmTimer = setInterval(function(){	
     			if(parent.Webcam.StreamingBuffer.length > 0)
 			{
-			    if (!parent.fs.existsSync(__dirname + parent.staticDirPath + parent.snapshots + '/' + foldername)){
-				parent.fs.mkdirSync(__dirname + parent.staticDirPath  + parent.snapshots + '/' + foldername);
+			    if (!parent.fs.existsSync(__dirname + parent.staticDirPath + parent.snapshots + parent.door_snapshots + '/' + foldername)){
+				parent.fs.mkdirSync(__dirname + parent.staticDirPath  + parent.snapshots +  parent.door_snapshots + '/' + foldername);
 			    }
     			    var frame = parent.Webcam.StreamingBuffer.pop().data;
 			    var filename = parent.DateTimeNow() + ".jpg";
 			    console.log("frame: ", filename);
-			    parent.fs.writeFile(__dirname + parent.staticDirPath  + parent.snapshots + '/' + foldername + '/' + filename, frame, function(error){
+			    parent.fs.writeFile(__dirname + parent.staticDirPath  + parent.snapshots +  parent.door_snapshots + '/' + foldername + '/' + filename, frame, function(error){
 				if (error) {
 				    console.error("write error:  " + error.message);
 				} else {
-				    console.log("Successful Write to " + __dirname + parent.staticDirPath  + parent.snapshots + '/' + foldername + '/' + filename);
+				    console.log("Successful Write to " + __dirname + parent.staticDirPath  + parent.snapshots +  parent.door_snapshots + '/' + foldername + '/' + filename);
 				}
 			    }
 					       );
