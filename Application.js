@@ -15,6 +15,8 @@ function Application(appName, appPort)
     this.staticDirPath = '/static';
     //route for viewing snapshots
     this.snapshots = '/snapshots';
+    this.door_snapshots = '/door';
+    this.fridge_snapshots = '/fridge';
 
     //system processes actions
     this.sys = require('sys');
@@ -62,6 +64,13 @@ Application.prototype.Init = function() {
     if (!this.fs.existsSync(__dirname + this.staticDirPath + this.snapshots)){
 	this.fs.mkdirSync(__dirname + this.staticDirPath + this.snapshots);
     }
+    if (!this.fs.existsSync(__dirname + this.staticDirPath + this.snapshots + this.door_snapshots)){
+	this.fs.mkdirSync(__dirname + this.staticDirPath + this.snapshots + this.door_snapshots);
+    }
+    if (!this.fs.existsSync(__dirname + this.staticDirPath + this.snapshots + this.fridge_snapshots)){
+	this.fs.mkdirSync(__dirname + this.staticDirPath + this.snapshots + this.fridge_snapshots);
+    }
+
     // init express app	
     this.digest = this.auth.digest({ realm: "Private", file: __dirname + "/htdigest" });	
     this.app.use(this.auth.connect(this.digest));
@@ -76,13 +85,13 @@ Application.prototype.Init = function() {
     });
 
     this.app.get("/fridge", function(req, res){
-	res.redirect("fridge.html");
+	res.redirect("snapshots/fridge");
     });
     
     this.app.use(this.snapshots, require('node-gallery')({
 	staticFiles :  this.staticDirPath + '/' + this.snapshots,
 	urlRoot : this.snapshots,
-	title : 'D&D Residence - Main Door'
+	title : 'D&D Residence'
     }));
 
     this.app.set('port', this.port);
