@@ -5,9 +5,14 @@ import subprocess
 import sys, os
 import yaml
 import shutil
+import math
 
 from PIL import Image
 import glob
+
+from collections import deque
+light_reading_cache = deque() # keep track of seen values
+cum_sum = 0
 
 def print_help():
         print("""
@@ -27,12 +32,26 @@ def configure_sensor(pin):
         GPIO.setup(pin,GPIO.IN)
 
 #bright is low, dark is high
-def is_light_on():
-        if GPIO.input(4) == 0:
+def is_light_on(counter, window_size, pin):
+        if filter_signal(GPIO.input(pin), counter, window_size) == 0:
                 return True
         else:
                 return False
 
+def filter_signal(val, counter, window_size):
+        print("val ", val)
+        global cum_sum
+        light_reading_cache.append(val)
+        cum_sum += val
+        if counter < window_size:
+                avg = cum_sum / float(counter)
+                round_avg = int(round(avg))
+        else:                           # if window is saturated,
+                avg = cum_sum / float(window_size)
+                cum_sum -= light_reading_cache.popleft()  # subtract oldest value
+                round_avg = int(round(avg))
+        return round_avg
+                
 def upload_snapshots(config, src):
         key = os.path.expanduser(config['ssh_key'])
         ssh  = 'ssh -i {}'.format(key)
@@ -55,8 +74,9 @@ def process(config):
                 print("starting mjpg-streamer")
                 cmd = [ config['script'], config['resolution'], str(config['fps']), str(config['port']) ]
                 proc_mjpg = subprocess.Popen(cmd)
+                counter = 1
                 while True:
-                        if is_light_on():
+                        if is_light_on(counter, config['window_size'], config['pinout']):
                                 #where to save images
                                 dirname = time.strftime("%Y%m%d-%H%M%S")
                                 if not os.path.exists(dirname):
@@ -65,7 +85,7 @@ def process(config):
                                 t_end = time.time() + config['snapshot_duration']
 
                                 #grab snapshots
-                                while time.time() < t_end:
+                                while is_light_on(counter, config['window_size'], config['pinout']):
                                         image_name = dirname + '/' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f") + '.jpg'
                                         wget_proc = subprocess.call(['wget',  'http://localhost:' + str(config['port']) + '/?action=snapshot', '-O', image_name], shell=False)
                                         time.sleep(1/config['fps'])
@@ -77,6 +97,12 @@ def process(config):
                                 upload_snapshots(config, dirname)
                                 shutil.rmtree(dirname)
                                 new_snapshots = False
+                                
+                        #avoid counter overflow
+                        if counter >= config['window_size']:
+                                counter = 2 * config['window_size'] #could be any value > window size
+                        
+                        counter = counter + 1
                         time.sleep(0.1)
         except KeyboardInterrupt:
                 print("Received KeyboardInterrupt, terminating processes.")
@@ -95,3 +121,9 @@ if __name__ == '__main__':
                 exit(-1)
         config = load_config(sys.argv[1])
         process(config)
+        # signal = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+        # counter = 1
+        # for i in signal:
+        #         print(filter_signal(i, counter))
+        #         counter = counter + 1
+                

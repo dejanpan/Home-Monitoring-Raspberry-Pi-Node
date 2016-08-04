@@ -9,3 +9,4 @@ user: pi
 host: raspberrypi
 remote_path: /home/pi/node_programs/Home-Monitoring-Raspberry-Pi-Node/static/snapshots/fridge
 angle: -90
+window_size: 7
