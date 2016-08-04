@@ -39,7 +39,6 @@ def is_light_on(counter, window_size, pin):
                 return False
 
 def filter_signal(val, counter, window_size):
-        print("val ", val)
         global cum_sum
         light_reading_cache.append(val)
         cum_sum += val
