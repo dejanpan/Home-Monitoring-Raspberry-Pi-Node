@@ -53,7 +53,11 @@ function ApplicationHM(appName, appPort) {
     
     this.emailService = {};
     this.emailOptions = {};
-
+    this.fridge_folder = __dirname + this.staticDirPath + this.snapshots + this.fridge_snapshots;
+    this.door_folder = __dirname + this.staticDirPath + this.snapshots + this.door_snapshots;
+    this.folders_to_keep = 5; //for fridge
+    this.days_to_keep = 7; //for alarm
+    this.cleanup_timeout = 1 * 24 * 60 * 60; //when to do cleanup
 
     //ftp 
     //this.Ftp = require("ftp");
@@ -454,7 +458,7 @@ ApplicationHM.prototype.Init = function() {
     //call base init function
     Application.prototype.Init.call(this);
     
-    var parent = this;		
+    var parent = this;	
     this.AlertMode.parent = this;
     this.Webcam.parent = this;
     this.Light.parent = this;
@@ -474,7 +478,7 @@ ApplicationHM.prototype.Init = function() {
     // });
     
     this.Gpio.open(this.Hardware.MotionSensor, "input", function(err){
-    	setInterval(function(){ 
+    	setInterval(function() { 
     	    parent.Gpio.read(parent.Hardware.MotionSensor, function(error,value){
 //		console.log("value: ", value);
     		if(parent.AlertMode.Active == true && parent.AlertMode.ActiveMotionSensor == true && value == 1){					
@@ -505,6 +509,7 @@ ApplicationHM.prototype.Init = function() {
     //init Alert if setting is active
     console.log(parent.DateTimeNow() + "(init) alert mode status check");
     parent.AlertMode.UpdateState(parent.Config.Settings.monitoring.alert);
+    this.CleanUp(parent);
 };
 
 
@@ -610,6 +615,32 @@ ApplicationHM.prototype.Execute = function() {
     this.ClientsListen();	
 };
 
+
+//cleanup
+ApplicationHM.prototype.CleanUp = function(parent) {
+
+    //todo get below params from the config file
+    //console.log(parent.Config.Settings.lights);
+    setInterval(function(){
+	//cleanup fridge folders
+	var rmdir = require('rimraf');
+	var path = require("path");
+	var dirs_sync = fs.readdirSync(parent.fridge_folder);
+	var dirs_sync_reverse = dirs_sync.reverse();
+	
+	for (var i = parent.folders_to_keep; i < dirs_sync_reverse.length; i++) {
+	    console.log("Deleting ", path.join(parent.fridge_folder, dirs_sync_reverse[i]));
+	    rmdir(path.join(parent.fridge_folder, dirs_sync_reverse[i]), function(error){});
+	}
+
+	//cleanup door folders
+	var findRemoveSync = require('find-remove');
+
+	var result = findRemoveSync(parent.door_folder, { age: { seconds: parent.days_to_keep * 24 * 60 * 60 }, test: false }); //age is in seconds
+	console.log('removed:', result);
+	
+    }, parent.cleanup_timeout);
+};
 
 
 //cleanup before exitting app - stop all webcam captures & close gpios
