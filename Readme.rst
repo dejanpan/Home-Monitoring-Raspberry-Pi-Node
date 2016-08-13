@@ -117,4 +117,4 @@ Remote light switch ensemble:
    :width: 400px
 
 
-**For technical implementation and details see: documentation.rst.**
+For technical implementation and details see: `documentation <documentation.rst>`_.
